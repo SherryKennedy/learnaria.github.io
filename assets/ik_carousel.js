@@ -2,7 +2,11 @@
 	
 	var pluginName = 'ik_carousel',
 		defaults = { // default settings
-			'animationSpeed' : 3000
+			// Activity 11, add instructions for ik_carousel
+		  'instructions': 'Carousel widget. Use left and reight arrows to navigate between slides.',
+			'animationSpeed' : 4000         //3000   
+
+		//focus on arrow key is not changing to say anything
 		};
 	 
 	/**
@@ -34,14 +38,25 @@
 		
 		$elem
 			.attr({
-				'id': id
+				//Activity 11, add attr for carousel role=region for landmark, tabindex so keyboard focusable, and ref ID of instructions <div> with aria-describedby. 
+				'id': id,
+				'role': 'region', // assign region role
+    		'tabindex': 0, // add into the tab order
+    		'aria-describedby': id + '_instructions' // associate with instructions
+				//'aria-labelledby': id + '_instructions' // associate with instructions
 			})
 			.addClass('ik_carousel')
-			.on('mouseenter', {'plugin': plugin}, plugin.stopTimer)
-			.on('mouseleave', {'plugin': plugin}, plugin.startTimer)
+			//Activity 11, add onKeydown as ref to function for keyboard operability
+			.on('keydown', {'plugin': plugin}, plugin.onKeyDown)
+			.on('focusin mouseenter', {'plugin': plugin}, plugin.stopTimer)
+			.on('focusout mouseleave', {'plugin': plugin}, plugin.startTimer)
+		
 		
 		$controls = $('<div/>')
-
+       //Activity 11, readers will not need Next/Previous controls, so hide them. Use Arrow keys instead defined in onKeyDown function 
+			.attr({
+         'aria-hidden': 'true' // hide controls from screen readers
+     		})
 			.addClass('ik_controls')
 			.appendTo($elem);
 				
@@ -67,14 +82,31 @@
 				$me = $(el);
 				$src = $me.find('img').remove().attr('src');
 				
-				$me.css({
-						'background-image': 'url(' + $src + ')'
-					});	
+				//Activity 11, Hide images from readers. Notice alt text for the images are defined in HTL but left empty so it is not read in this case. Readers will read the figcaptions. 
+				$me.attr({
+    			    'aria-hidden': 'true' // hide images from screen readers
+				   })  //took out the $me.css
+				    .css({
+							 'background-image': 'url(' + $src + ')'
+						});	
 				
 				$('<li/>')
 					.on('click', {'plugin': plugin, 'slide': i}, plugin.gotoSlide)
 					.appendTo($navbar);
 			});
+			
+		//Activity 11, add in reader instructions by generating the <div> containing instructions. Hide <div> by dftlt.
+	 //Instructions read when carousel receives focus and aria-
+	 // describedby attrib is dynamically added to ref instr. 
+	 $('<div/>') // add instructions for screen reader users
+			.attr({
+				'id': id + '_instructions',
+				'aria-hidden': 'true'
+			})
+			.text(this.options.instructions)
+			.addClass('ik_readersonly')
+			.appendTo($elem);
+	
 		
 		plugin.navbuttons = $navbar.children('li');
 		plugin.slides.first().addClass('active');
@@ -103,6 +135,12 @@
 		
 		plugin.timer = setInterval(plugin.gotoSlide, plugin.options.animationSpeed, {'data':{'plugin': plugin, 'slide': 'right'}});
 		
+		//Activity 11, remove the live region when focus on carousel is removed. So live regions stops reading when 
+		//time is reactivated onblur, and does not interfers with reader elsewhere on page. 
+		if (event.type === 'focusout') {
+    		plugin.element.removeAttr('aria-live');
+			}
+		
 	};
 	
 	/** 
@@ -117,6 +155,12 @@
 		var plugin = event.data.plugin;
 		clearInterval(plugin.timer);
 		plugin.timer = null;
+		
+		//Actiivty 11, add aria-live=polite so content updating in live region announces when a reader in not reading elsewhere on page
+		//Content on visible carousel is read automatically, manually navigate btwn panels with arrow keys. 
+		if (event.type === 'focusin') {
+	 			plugin.element.attr({'aria-live': 'polite'});
+				}
 		
 	};
 	
@@ -166,17 +210,56 @@
 			next = event.data.next;
 			dir = event.data.dir;
 			
-			active.off( ik_utils.getTransitionEventName() )
-				.removeClass(direction + ' active');
-				
-			next.removeClass('next')
-				.addClass('active');
+			//Activity 11, hide the active slide from reader with aria-hidden=true
+			active.attr({
+        				'aria-hidden': 'true'
+    					})
+						.off( ik_utils.getTransitionEventName() )
+						.removeClass(direction + ' active');
+			//Activity 11, make the next slide visible to reader with aria-hidden=false, in the gotoSlide
+			next.attr({
+        		'aria-hidden': 'false'
+    			})	
+					.removeClass('next')
+				  .addClass('active');
 			
 		});
 		
 		plugin.navbuttons.removeClass('active').eq(n).addClass('active');
 		
 	}
+	
+	//Activity 11, add keyboard operability for carousel, pull keyboard events from ik_utils.js, left and right arrows for moving btwn panels in carousel, Esc key to exit carousel and 
+	//resume automatic rotation. 
+	/**
+* Handles keydown event on the next/prev links.
+*
+* @param {Object} event - Keyboard event.
+* @param {object} event.data - Event data.
+* @param {object} event.data.plugin - Reference to plugin.
+*/
+Plugin.prototype.onKeyDown = function (event) {
+       
+    var plugin = event.data.plugin;
+       
+    switch (event.keyCode) {
+           
+        case ik_utils.keys.left:
+            event.data = {'plugin': plugin, 'slide': 'left'};
+            plugin.gotoSlide(event);
+            break;
+        case ik_utils.keys.right:
+            event.data = {'plugin': plugin, 'slide': 'right'};
+            plugin.gotoSlide(event);
+            break;
+        case ik_utils.keys.esc:
+            plugin.element.blur();
+            break;
+        }
+    }
+	
+	
+	
 	
 	$.fn[pluginName] = function ( options ) {
 		
