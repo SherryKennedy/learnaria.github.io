@@ -1,7 +1,8 @@
 ;(function ( $, window, document, undefined ) {
-	
+	//ACtivity 8, define instructions on how to use slider for a reader
 	var pluginName = 'ik_slider',
 		defaults = {
+			'instructions': 'Use the right and left arrow keys to increase or decrease the slider value. ',
 			'minValue': 0,
 			'maxValue': 100,
 			'nowValue': 0,
@@ -44,10 +45,11 @@
 			throw( plugin._name + ' plugin must be used only with text input elements.');
 		
 		} else {
-		
+
 			plugin.textfield
-				.attr({
-					'readonly': ''
+				.attr({//Activity 8, remove keybaard access from orig text field -1
+					'readonly': '',
+					'tabindex': -1
 				})
 				.addClass('ik_value')
 				.wrap('<div></div>'); // wrap initial element in a div
@@ -58,17 +60,43 @@
 			
 			plugin.fill = $('<div/>')
 				.addClass('ik_fill');
-			
+				
 			plugin.knob = $('<div/>')
-				.attr({
-					'id': id
+				.attr({//Activity 8, add attr for focusable,announces slider with role (no text), set values, sed ref instructions with describeby/labelledby
+					'id': id,
+					'tabindex': 0, // add this element to tab order
+					'role': 'slider', // assign role slider
+					'aria-valuemin': plugin.options.minValue, // set slider minimum value
+					'aria-valuemax': plugin.options.maxValue, // set slider maximum value
+					'aria-valuenow': plugin.options.minValue, // set slider current value
+					//would not work with Chrome Vox, had to add coded line below instead using labelledby focus slider                                              https://code.google.com/archive/p/google-axs-chrome/issues/158
+					//'aria-describedby': id + '_instructions', // add description */  
+					'aria-labelledby': id + '_instructions' // add description when focused on says instructions */
 				})
+				
+		
 				.addClass('ik_knob')
+				//Activity 8, add keydown ref to function of onKeyDown
+		    //for keyboard operability to the slider		
+				.on('keydown', {'plugin': plugin}, plugin.onKeyDown)
 				.on('mousedown', {'plugin': plugin}, plugin.onMouseDown)
 				.on('mousemove', {'plugin': plugin}, plugin.onMouseMove)
 				.on('mouseup', {'plugin': plugin}, plugin.onMouseUp)
 				.on('mouseleave', function(){ setTimeout(plugin.onMouseUp, 100, { 'data': {'plugin': plugin} }) });
-				
+		
+			//	$('<div/>').attr({'aria-live': 'polite'}).addClass('readers_only').css({'display': 'none'}).text('Use tab key to enter menu, up and down arrow keys to navigate, left and right to open or collapse submenues, space or enter to select.').appendTo($elem);
+			//Activity 8, add div for the screen reader instr.
+				$('<div/>') // add instructions for screen reader users
+	    			.attr({
+	    				'id': id + '_instructions',
+							'aria-live': 'polite'   //try adding this
+	    			})
+	    	.text(this.options.instructions)
+	    	.addClass('ik_readersonly')
+	    	.appendTo(this.element);
+		
+		
+		  //initial div 		
 			$('<div/>') // add slider track
 				.addClass('ik_track')
 				.append(this.fill, this.knob)
@@ -76,10 +104,12 @@
 			
 			this.setValue(plugin.options.minValue); // update current value
 		
-		}
+		
+		}  //end else
 					
-	};
-	
+	};  //end init
+
+
 	/** 
 	 * Sets current value. 
 	 * 
@@ -89,6 +119,12 @@
 		
 		this.textfield.val(n);
 		this.options.nowValue = n;
+		//Activity 8, add dynamically the value of aria-valuenow
+		//based on the value at which the slider is located
+		this.knob
+					 .attr({
+							 'aria-valuenow': n
+					 });
 		this.updateDisplay(n); // update display
 	};
 	
@@ -114,7 +150,55 @@
 			});
 		
 	};
-	
+			//Activity 8, add in event handler to slider, right/left arrows to move slider along bar,Home/End controls for moving slider between start and finish
+			/**
+		* Keyboard event handler.
+		*
+		* @param {object} event - Keyboard event.
+		* @param {object} event.data - Event data.
+		* @param {object} event.data.plugin - Reference to plugin.
+		*/
+		/**
+		* Keyboard event handler.
+		*
+		* @param {object} event - Keyboard event.
+		* @param {object} event.data - Event data.
+		* @param {object} event.data.plugin - Reference to plugin.
+		*/
+		Plugin.prototype.onKeyDown = function (event) {
+		   
+		    var $elem, plugin, value;
+		   
+		    $elem = $(this);
+		    plugin = event.data.plugin;
+		   
+		    switch (event.keyCode) {
+		       
+		        case ik_utils.keys.right:
+		           
+		            value = parseInt($elem.attr('aria-valuenow')) + plugin.options.step;
+		            value = value < plugin.options.maxValue ? value : plugin.options.maxValue;     
+		            plugin.setValue(value);
+		            break;
+		           
+		        case ik_utils.keys.end:
+		            plugin.setValue(plugin.options.maxValue);
+		            break;
+		       
+		        case ik_utils.keys.left:
+		           
+		            value = parseInt($elem.attr('aria-valuenow')) - plugin.options.step;
+		            value = value > plugin.options.minValue ? value : plugin.options.minValue
+		            plugin.setValue(value);
+		            break;
+		       
+		        case ik_utils.keys.home:
+		            plugin.setValue(plugin.options.minValue);
+		            break;
+		           
+		    }
+		   
+		};
 
 	
 	/** 
