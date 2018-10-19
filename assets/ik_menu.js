@@ -311,8 +311,15 @@
              console.log($current.parents('ul').length)
              
              
+             //orig //((test))
+             if ($current.parents('ul').length > 1) {
+                $current.attr({'tabindex': -1}).prev('li').attr({'tabindex': 0}).focus();
+            }
              
-             $current.attr({'tabindex': -1}).prev('li').attr({'tabindex': 0}).focus();
+            //tested below 
+            // $current.attr({'tabindex': -1}).prev('li').attr({'tabindex': 0}).focus();
+            
+            
              //up arrow will collapse submenu on 
             // if ($parentmenu.parent().attr('aria-haspopup')) {
                 //  // $parentitem.removeClass('expanded');
@@ -360,18 +367,21 @@
              event.preventDefault();
              event.stopPropagation();
             //Activity 12, found that this only works the first time and not subsequent, to open the submenu
-            /* if($submenu.length) {
+            //ORIG Test, not working all time
+            /*if($submenu.length) {
                  plugin.showSubmenu(event);
                  $submenu.children('li:eq(0)').attr({'tabindex': 0}).focus();
              } */
              //Acitivity 12, space bar used to activate a menu item
              //plugin.activateMenuItem(event);
              //instuctions when go on menu say it is supposed to open submenu
-             if ($submenu.length ==1) {
-                     $submenu.attr({'aria-hidden': 'false'}).show();
-                     $submenu.find('li:eq(0)').attr({"tabindex": 0}).focus();
-             }
-             break;
+             //working that i did
+             if ($submenu.length) {
+            //  if ($submenu.length ==1) {
+                       $submenu.attr({'aria-hidden': 'false'}).show();
+                       $submenu.find('li:eq(0)').attr({"tabindex": 0}).focus();
+               }
+               break;
         
          case ik_utils.keys.esc:
             //Close the current submenu
